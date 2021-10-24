@@ -25,7 +25,7 @@ def writeCache(env, cache):
             txn.put(k, v)
 
 
-def createDataset(inputPath, gtFile, outputPath, checkValid=True):
+def createDataset(inputPath, start, end, gtFile, outputPath, checkValid=True):
     """
     Create LMDB dataset for training and evaluation.
     ARGS:
@@ -42,8 +42,10 @@ def createDataset(inputPath, gtFile, outputPath, checkValid=True):
     with open(gtFile, 'r', encoding='utf-8') as data:
         datalist = data.readlines()
 
-    nSamples = len(datalist)
-    for i in range(nSamples):
+    start = min(len(datalist), start)
+    end = min(len(datalist), end)
+    nSamples = end - start
+    for i in range(start, end):
         imagePath, label = datalist[i].strip('\n').split('\t')
         imagePath = os.path.join(inputPath, imagePath)
 
