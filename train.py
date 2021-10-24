@@ -12,6 +12,7 @@ import torch.optim as optim
 import torch.utils.data
 import numpy as np
 
+from tqdm import tqdm
 from utils import CTCLabelConverter, CTCLabelConverterForBaiduWarpctc, AttnLabelConverter, Averager
 from dataset import hierarchical_dataset, AlignCollate, Batch_Balanced_Dataset
 from model import Model
@@ -142,7 +143,7 @@ def train(opt):
     best_norm_ED = -1
     iteration = start_iter
 
-    while(True):
+    for iteration in tqdm(range(start_iter, opt.num_iter)):
         # train part
         image_tensors, labels = train_dataset.get_batch()
         image = image_tensors.to(device)
@@ -220,10 +221,7 @@ def train(opt):
             torch.save(
                 model.state_dict(), f'./saved_models/{opt.exp_name}/iter_{iteration+1}.pth')
 
-        if (iteration + 1) == opt.num_iter:
-            print('end the training')
-            sys.exit()
-        iteration += 1
+    print('end the training')
 
 
 if __name__ == '__main__':
@@ -235,7 +233,7 @@ if __name__ == '__main__':
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=4)
     parser.add_argument('--batch_size', type=int, default=192, help='input batch size')
     parser.add_argument('--num_iter', type=int, default=300000, help='number of iterations to train for')
-    parser.add_argument('--valInterval', type=int, default=2000, help='Interval between each validation')
+    parser.add_argument('--valInterval', type=int, default=500, help='Interval between each validation')
     parser.add_argument('--saved_model', default='', help="path to model to continue training")
     parser.add_argument('--FT', action='store_true', help='whether to do fine-tuning')
     parser.add_argument('--adam', action='store_true', help='Whether to use adam (default is Adadelta)')
