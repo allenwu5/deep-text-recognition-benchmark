@@ -1,50 +1,39 @@
 import csv
-from os import listdir
-from os.path import join
+from os.path import exists, join
 
 import cv2
-from shapely.affinity import scale
-from shapely.geometry import Polygon
 from tqdm import tqdm
 
-from pathlib import Path
-xfact = 1.2
-yfact = 1.8
+img_dir = '/content/rects'
 
-input_img_dir = '/content/drive/MyDrive/colab/datasets/china_steel/public_training_data/public_training_data'
-input_gt_csv = '/content/drive/MyDrive/colab/datasets/china_steel/public_training_data/public_training_data.csv'
-output_dir = '/content/drive/MyDrive/colab/deep-text-recognition-benchmark/train'
-output_gt_txt = join(output_dir, 'gt.txt')
-output_img_dir = '/content/drive/MyDrive/colab/deep-text-recognition-benchmark/train/img'
-Path(output_img_dir).mkdir(parents=True, exist_ok=True) 
+train_gt_csv = '/content/drive/MyDrive/2021_china_steel_ocr/label/public_training_data.csv'
+train_test_gt_csv = '/content/drive/MyDrive/2021_china_steel_ocr/label/public_testing_data.csv'
 
-with open(output_gt_txt, 'w') as output_gt_txt_f:
-    with open(input_gt_csv, 'r') as input_gt_csv_f:
-        reader = csv.DictReader(input_gt_csv_f)
-        lines = list(reader)
-        for d in tqdm(lines):
-            filename = d['filename']
-            label = d['label']
+output_gt_txt = '/content/gt.txt'
 
-            poly = []
-            poly += [d['top left x'], d['top left y']]
-            poly += [d['top right x'], d['top right y']]
-            poly += [d['bottom right x'], d['bottom right y']]
-            poly += [d['bottom left x'], d['bottom left y']]
 
-            poly = [float(x) for x in poly]
-            poly = zip(poly[::2], poly[1::2])
-            p = Polygon(poly)
-            p = scale(p, xfact=xfact, yfact=yfact)
-            bbox = p.bounds
-            bbox = [int(x) for x in bbox]
+with open(output_gt_txt, 'w') as gt_file:
+    for csv_path in [train_test_gt_csv, train_gt_csv]:
+        with open(csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            lines = list(reader)
+            for d in tqdm(lines):
+                filename = d['filename']
+                label = d['label']
+                img_path = join(img_dir, f'{filename}.jpg')
 
-            img_path = join(input_img_dir, f'{filename}.jpg')
-            img = cv2.imread(img_path)
-            cropped = img[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-            h, w, c = cropped.shape
-            if w > 0:
-                output_path = join(output_img_dir, f'{filename}.jpg')
-                cv2.imwrite(output_path, cropped)
+                if exists(img_path):
+                    gt_file.write(f'{img_path}\t{label}\n')
 
-                output_gt_txt_f.write(f'{output_path}\t{label}\n')
+                    img = cv2.imread(img_path)
+
+                    width = int(img.shape[1] * 60 / 100)
+                    height = int(img.shape[0] * 70 / 100)
+                    dim = (width, height)
+                    resized = cv2.resize(
+                        img, dim, interpolation=cv2.INTER_AREA)
+                    # img = cv2.rotate(img, cv2.ROTATE_180)
+
+                    img_path = join(img_dir, f'{filename}_resize_70.jpg')
+                    cv2.imwrite(img_path, resized)
+                    gt_file.write(f'{img_path}\t{label}\n')
